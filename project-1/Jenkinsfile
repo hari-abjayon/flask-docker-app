@@ -2,21 +2,30 @@ pipeline {
     agent any
  
     environment {
-        DOCKER_HUB_USER = "hariabjayon15"
-        IMAGE_NAME = "${DOCKER_HUB_USER}/flask-app"
+        IMAGE_NAME = "hariabjayon15/flask-app"
     }
  
     stages {
         stage('Checkout Code') {
             steps {
-                git branch: 'main', url: 'https://github.com/hari-abjayon/flask-docker-app.git'
-        }}
+                checkout scm
+                script {
+                    echo "Checked out code into workspace: ${WORKSPACE}"
+                }
+            }
+        }
  
         stage('Build Docker Image') {
             steps {
                 script {
                     def BUILD_NUMBER = env.BUILD_NUMBER
-                    sh "docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} ${WORKSPACE}/project-1"
+                    def WORKDIR = "${WORKSPACE}/project-1"
+                    
+                    // Verify workspace content
+                    sh "ls -la ${WORKDIR}"
+ 
+                    // Build and tag the Docker image
+                    sh "docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} ${WORKDIR}"
                     sh "docker tag ${IMAGE_NAME}:${BUILD_NUMBER} ${IMAGE_NAME}:latest"
                 }
             }
@@ -25,13 +34,26 @@ pipeline {
         stage('Push to Docker Hub') {
             steps {
                 script {
-                    withCredentials([string(credentialsId: 'docker-hub-token', variable: 'DOCKER_PASSWORD')]) {
-                        sh "echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_HUB_USER} --password-stdin"
-                        sh "docker push ${IMAGE_NAME}:${BUILD_NUMBER}"
-                        sh "docker push ${IMAGE_NAME}:latest"
-                    }
+                    def BUILD_NUMBER = env.BUILD_NUMBER
+ 
+                    // Authenticate with Docker Hub (ensure credentials are set up in Jenkins)
+                    sh "echo ${DOCKER_HUB_PASSWORD} | docker login -u ${DOCKER_HUB_USERNAME} --password-stdin"
+ 
+                    // Push images to Docker Hub
+                    sh "docker push ${IMAGE_NAME}:${BUILD_NUMBER}"
+                    sh "docker push ${IMAGE_NAME}:latest"
                 }
             }
         }
     }
+ 
+    post {
+        failure {
+            echo "Build failed. Please check the logs."
+        }
+        success {
+            echo "Build and push to Docker Hub completed successfully."
+        }
+    }
 }
+ 
