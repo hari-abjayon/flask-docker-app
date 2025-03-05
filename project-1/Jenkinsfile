@@ -16,6 +16,7 @@ pipeline {
             steps {
                 script {
                     def BUILD_NUMBER = env.BUILD_NUMBER
+                    cd project-1
                     sh "docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} ."
                     sh "docker tag ${IMAGE_NAME}:${BUILD_NUMBER} ${IMAGE_NAME}:latest"
                 }
