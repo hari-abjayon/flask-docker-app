@@ -10,7 +10,7 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 git branch: 'main', url: 'https://github.com/hari-abjayon/flask-docker-app.git'
-        }
+        }}
  
         stage('Build Docker Image') {
             steps {
@@ -34,4 +34,4 @@ pipeline {
             }
         }
     }
-    }}
+}
