@@ -3,52 +3,52 @@ pipeline {
  
     environment {
         IMAGE_NAME = "hariabjayon15/flask-app"
-        BUILD_TAG = "${BUILD_NUMBER}"
+        BUILD_TAG = "${env.BUILD_NUMBER}"  // Jenkins build number as tag
+        FULL_IMAGE_NAME = "hariabjayon15/flask-app:${env.BUILD_NUMBER}"
     }
  
     stages {
         stage('Checkout Code') {
             steps {
-                script {
-                    echo "Workspace directory: ${env.WORKSPACE}"
-                    echo "Checking for project directory: ${env.WORKSPACE}/project-1"
-                    if (!fileExists("${env.WORKSPACE}/project-1")) {
-                        error "ERROR: Project directory missing!"
-                    }
-                }
+                git branch: 'main', url: 'https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPO.git'
             }
         }
  
         stage('Build Docker Image') {
             steps {
-                script {
-                    echo "Building Docker image..."
-                    dir('project-1') {
-                        sh "docker build -t ${IMAGE_NAME}:${BUILD_TAG} ."
-                        sh "docker tag ${IMAGE_NAME}:${BUILD_TAG} ${IMAGE_NAME}:latest"
-                    }
+                sh "docker build -t $FULL_IMAGE_NAME ."
+            }
+        }
+ 
+        stage('Login to Docker Hub') {
+            steps {
+                withCredentials([string(credentialsId: 'docker-hub-token', variable: 'DOCKER_PASS')]) {
+                    sh "echo $DOCKER_PASS | docker login -u hariabjayon15 --password-stdin"
                 }
             }
         }
  
-        stage('Push to Docker Hub') {
+        stage('Push Docker Image') {
             steps {
-                script {
-                    withCredentials([usernamePassword(credentialsId: 'DOCKER_HUB_USERNAME', 
-                                                     usernameVariable: 'DOCKER_USER', 
-                                                     passwordVariable: 'DOCKER_PASS')]) {
-                        sh "echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin"
-                        sh "docker push ${IMAGE_NAME}:${BUILD_TAG}"
-                        sh "docker push ${IMAGE_NAME}:latest"
-                    }
-                }
+                sh "docker push $FULL_IMAGE_NAME"
+                sh "docker tag $FULL_IMAGE_NAME $IMAGE_NAME:latest"
+                sh "docker push $IMAGE_NAME:latest"
+            }
+        }
+ 
+        stage('Cleanup Unused Docker Images') {
+            steps {
+                sh "docker rmi $FULL_IMAGE_NAME || true"
             }
         }
     }
  
     post {
+        success {
+            echo "✅ Build and push successful!"
+        }
         failure {
-            echo "Build failed. Please check the logs."
+            echo "❌ Build or push failed!"
         }
     }
 }
