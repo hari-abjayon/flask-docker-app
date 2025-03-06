@@ -19,7 +19,7 @@ pipeline {
             steps {
                 script {
                     def BUILD_NUMBER = env.BUILD_NUMBER
-                    def WORKDIR = "${WORKSPACE}/project-1"
+                    def WORKDIR = "${WORKSPACE}\project-1"
                     
                     // Verify workspace content
                     sh "ls -la ${WORKDIR}"
