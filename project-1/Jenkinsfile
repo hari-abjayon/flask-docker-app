@@ -1,11 +1,11 @@
 pipeline {
     agent any
- 
+
     environment {
         IMAGE_NAME = "hariabjayon15/flask-app"
         BUILD_TAG = "${BUILD_NUMBER}"
     }
- 
+
     stages {
         stage('Checkout Code') {
             steps {
@@ -18,7 +18,7 @@ pipeline {
                 }
             }
         }
- 
+
         stage('Build Docker Image') {
             steps {
                 script {
@@ -32,17 +32,19 @@ pipeline {
                 }
             }
         }
- 
+
         stage('Login to Docker Hub') {
             steps {
                 script {
                     withCredentials([string(credentialsId: 'docker-hub-token', variable: 'DOCKER_PASS')]) {
-                        powershell "echo \$DOCKER_PASS | docker login -u hariabjayon15 --password-stdin"
+                        powershell """
+                        docker login -u hariabjayon15 --password-stdin <<< \$DOCKER_PASS
+                        """
                     }
                 }
             }
         }
- 
+
         stage('Push to Docker Hub') {
             steps {
                 script {
@@ -54,11 +56,12 @@ pipeline {
             }
         }
     }
- 
+
     post {
         failure {
             echo "❌ Build failed. Please check the logs."
         }
     }
 }
+
  
