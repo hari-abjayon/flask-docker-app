@@ -9,13 +9,7 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                script {
-                    echo "Workspace directory: ${env.WORKSPACE}"
-                    echo "Checking for project directory: ${env.WORKSPACE}\\project-1"
-                    if (!fileExists("${env.WORKSPACE}\\project-1")) {
-                        error "ERROR: Project directory missing!"
-                    }
-                }
+                git branch: 'main', url: 'https://github.com/hari-abjayon/flask-docker-app.git'
             }
         }
 
@@ -23,21 +17,20 @@ pipeline {
             steps {
                 script {
                     withCredentials([usernamePassword(credentialsId: 'docker-hub-token', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                         bat """
-                         echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
-                         """
+                        bat """
+                        echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+                        """
                     }
                 }
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build & Tag Docker Image') {
             steps {
                 script {
-                    echo "Building Docker image..."
-                    dir('project-1') {
+                    echo "Building Docker image using the Dockerfile..."
+                    dir('project-1') {   
                         powershell """
-                        docker pull python:3.11-slim
                         docker build -t ${IMAGE_NAME}:${BUILD_TAG} .
                         docker tag ${IMAGE_NAME}:${BUILD_TAG} ${IMAGE_NAME}:latest
                         """
@@ -49,10 +42,12 @@ pipeline {
         stage('Push to Docker Hub') {
             steps {
                 script {
-                    powershell """
-                    docker push ${IMAGE_NAME}:${BUILD_TAG}
-                    docker push ${IMAGE_NAME}:latest
-                    """
+                    dir('project-1') {   
+                        powershell """
+                        docker push ${IMAGE_NAME}:${BUILD_TAG}
+                        docker push ${IMAGE_NAME}:latest
+                        """
+                    }
                 }
             }
         }
