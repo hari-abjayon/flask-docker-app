@@ -8,9 +8,12 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                checkout scm
                 script {
-                    echo "Checked out code into workspace: ${WORKSPACE}"
+                    // Print the workspace path
+                    echo "Workspace directory: ${env.WORKSPACE}"
+                    
+                    // Verify project directory after checkout
+                    sh "ls -la ${env.WORKSPACE}"
                 }
             }
         }
@@ -19,10 +22,12 @@ pipeline {
             steps {
                 script {
                     def BUILD_NUMBER = env.BUILD_NUMBER
-                    def WORKDIR = "${WORKSPACE}\project-1"
+                    def WORKDIR = "${env.WORKSPACE}/project-1".replace("\\", "/") // Ensure proper path format
                     
-                    // Verify workspace content
-                    sh "ls -la ${WORKDIR}"
+                    echo "Checking project directory at: ${WORKDIR}"
+                    
+                    // Verify project directory exists
+                    sh "ls -la ${WORKDIR} || echo 'Project directory missing!'"
  
                     // Build and tag the Docker image
                     sh "docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} ${WORKDIR}"
@@ -36,7 +41,7 @@ pipeline {
                 script {
                     def BUILD_NUMBER = env.BUILD_NUMBER
  
-                    // Authenticate with Docker Hub (ensure credentials are set up in Jenkins)
+                    // Authenticate with Docker Hub
                     sh "echo ${DOCKER_HUB_PASSWORD} | docker login -u ${DOCKER_HUB_USERNAME} --password-stdin"
  
                     // Push images to Docker Hub
