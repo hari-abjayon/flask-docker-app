@@ -38,7 +38,7 @@ pipeline {
                 script {
                     withCredentials([string(credentialsId: 'docker-hub-token', variable: 'DOCKER_PASS')]) {
                         powershell """
-                        docker login -u hariabjayon15 --password-stdin <<< \$DOCKER_PASS
+                        echo \$DOCKER_PASS | docker login -u hariabjayon15 --password-stdin
                         """
                     }
                 }
@@ -63,5 +63,3 @@ pipeline {
         }
     }
 }
-
- 
