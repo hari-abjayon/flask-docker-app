@@ -3,6 +3,7 @@ pipeline {
  
     environment {
         IMAGE_NAME = "hariabjayon15/flask-app"
+        BUILD_TAG = "${BUILD_NUMBER}"
     }
  
     stages {
@@ -10,15 +11,10 @@ pipeline {
             steps {
                 script {
                     echo "Workspace directory: ${env.WORKSPACE}"
-                    
-                    // Ensure correct path format for Windows
-                    def WORKDIR = "${env.WORKSPACE}\\project-1"
- 
-                    // Print project directory path
-                    echo "Checking for directory: ${WORKDIR}"
- 
-                    // Verify project directory exists (Fix: Use double backslashes)
-                    bat "if exist \"${WORKDIR}\" (echo Directory exists) else (echo ERROR: Project directory missing!)"
+                    echo "Checking for project directory: ${env.WORKSPACE}/project-1"
+                    if (!fileExists("${env.WORKSPACE}/project-1")) {
+                        error "ERROR: Project directory missing!"
+                    }
                 }
             }
         }
@@ -26,20 +22,11 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    def BUILD_NUMBER = env.BUILD_NUMBER
-                    def WORKDIR = "${env.WORKSPACE}\\project-1"
- 
-                    echo "Verifying project directory at: ${WORKDIR}"
-                    
-                    // Ensure project directory exists before building
-                    bat "if exist \"${WORKDIR}\" (echo Found project directory) else (echo ERROR: Project directory missing!)"
- 
-                    // Change to project directory and build Docker image
-                    bat """
-                    cd /d "${WORKDIR}"
-                    docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} .
-                    docker tag ${IMAGE_NAME}:${BUILD_NUMBER} ${IMAGE_NAME}:latest
-                    """
+                    echo "Building Docker image..."
+                    dir('project-1') {
+                        sh "docker build -t ${IMAGE_NAME}:${BUILD_TAG} ."
+                        sh "docker tag ${IMAGE_NAME}:${BUILD_TAG} ${IMAGE_NAME}:latest"
+                    }
                 }
             }
         }
@@ -47,14 +34,13 @@ pipeline {
         stage('Push to Docker Hub') {
             steps {
                 script {
-                    def BUILD_NUMBER = env.BUILD_NUMBER
- 
-                    // Authenticate with Docker Hub
-                    bat "docker login -u ${DOCKER_HUB_USERNAME} -p ${DOCKER_HUB_PASSWORD}"
- 
-                    // Push images to Docker Hub
-                    bat "docker push ${IMAGE_NAME}:${BUILD_NUMBER}"
-                    bat "docker push ${IMAGE_NAME}:latest"
+                    withCredentials([usernamePassword(credentialsId: 'DOCKER_HUB_USERNAME', 
+                                                     usernameVariable: 'DOCKER_USER', 
+                                                     passwordVariable: 'DOCKER_PASS')]) {
+                        sh "echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin"
+                        sh "docker push ${IMAGE_NAME}:${BUILD_TAG}"
+                        sh "docker push ${IMAGE_NAME}:latest"
+                    }
                 }
             }
         }
@@ -63,9 +49,6 @@ pipeline {
     post {
         failure {
             echo "Build failed. Please check the logs."
-        }
-        success {
-            echo "Build and push to Docker Hub completed successfully."
         }
     }
 }
