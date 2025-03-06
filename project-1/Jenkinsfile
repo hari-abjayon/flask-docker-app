@@ -19,12 +19,12 @@ pipeline {
             }
         }
 
-        stage('Login to Docker Hub') {  // 🔹 Moved login before build
+        stage('Login to Docker Hub') {
             steps {
                 script {
-                    withCredentials([string(credentialsId: 'docker-hub-token', variable: 'DOCKER_PASS')]) {
+                    withCredentials([usernamePassword(credentialsId: 'docker-hub-token', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                         powershell """
-                        echo \$DOCKER_PASS | docker login -u hariabjayon15 --password-stdin
+                        echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
                         """
                     }
                 }
@@ -37,7 +37,7 @@ pipeline {
                     echo "Building Docker image..."
                     dir('project-1') {
                         powershell """
-                        docker pull python:3.11-slim  # 🔹 Explicitly pulling base image
+                        docker pull python:3.11-slim
                         docker build -t ${IMAGE_NAME}:${BUILD_TAG} .
                         docker tag ${IMAGE_NAME}:${BUILD_TAG} ${IMAGE_NAME}:latest
                         """
